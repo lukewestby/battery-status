@@ -1,4 +1,6 @@
 var _lukewestby$battery_status$Native_BatteryStatus = (function () {
+  var scheduler = _elm_lang$core$Native_Scheduler
+
   function getBattery() {
     return window.navigator.getBattery()
   }
@@ -7,37 +9,53 @@ var _lukewestby$battery_status$Native_BatteryStatus = (function () {
     return typeof window.navigator.getBattery === 'function'
   }
 
-  function getProperty(property) {
-    return function () {
-      return _elm_lang$core$Native_Scheduler.nativeBinding(function (callback) {
-        if (!isSupported()) {
-          callback(_elm_lang$core$Native_Scheduler.fail({ ctor: 'Unsupported' }))
-        } else {
-          getBattery().then(function (battery) {
-            callback(_elm_lang$core$Native_Scheduler.succeed(battery[property]))
-          })
-        }
-      })
+  function toBatteryStatus(battery) {
+    return {
+      isCharging: battery.charging,
+      level: battery.level,
+      chargingTime: battery.chargingTime * 1000,
+      dischargingTime: battery.dischargingTime * 1000
     }
   }
 
-  function on(eventName, decoder, toTask) {
-    return _elm_lang$core$Native_Scheduler.nativeBinding(function (callback) {
+  var batteryStatus = scheduler.nativeBinding(function (callback) {
+    if (!isSupported()) {
+      callback(scheduler.fail({ ctor: 'Unsupported' }))
+    } else {
+      getBattery().then(function (battery) {
+        callback(scheduler.succeed(toBatteryStatus(battery)))
+      })
+    }
+  })
+
+  var eventNames = [
+    'chargingchange',
+    'levelchange',
+    'chargingtimechange',
+    'dischargingtimechange'
+  ]
+
+  function onChange(toTask) {
+    return scheduler.nativeBinding(function (callback) {
       if (!isSupported()) {
-        return function () { }
+        return
       }
 
       function performTask(event) {
-          _elm_lang$core$Native_Scheduler.rawSpawn(toTask(event));
+        scheduler.rawSpawn(toTask(toBatteryStatus(event.target)))
       }
 
       getBattery().then(function (battery) {
-        battery.addEventListener(eventName, performTask)
+        eventNames.forEach(function (eventName) {
+          battery.addEventListener(eventName, performTask)
+        })
       })
 
   		return function () {
         getBattery().then(function (battery) {
-          battery.removeEventListener(eventName, performTask)
+          eventNames.forEach(function (eventName) {
+            battery.removeEventListener(eventName, performTask)
+          })
         })
   		}
   	})
@@ -45,10 +63,7 @@ var _lukewestby$battery_status$Native_BatteryStatus = (function () {
 
   return {
     isSupported: isSupported(),
-    isCharging: getProperty('charging'),
-    chargeLevel: getProperty('level'),
-    chargingTime: getProperty('chargingTime'),
-    dischargingTime: getProperty('dischargingTime'),
-    on: on
+    batteryStatus: batteryStatus,
+    onChange: onChange
   }
 }())

@@ -1,4 +1,4 @@
-var _lukewestby$battery_status$Native_Battery = (function () {
+var _lukewestby$battery_status$Native_BatteryStatus = (function () {
   function getBattery() {
     return window.navigator.getBattery()
   }

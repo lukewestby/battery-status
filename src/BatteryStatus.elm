@@ -5,7 +5,7 @@ effect module BatteryStatus
         , BatteryStatus
         , Error(..)
         , now
-        , changes
+        , withChanges
         )
 
 {-| This package helps you find out information about the user's battery life if
@@ -23,7 +23,7 @@ user's battery life and account for reduced CPU performance at low power levels.
 @docs now
 
 # Subscriptions
-@docs changes
+@docs withChanges
 -}
 
 import Time exposing (Time)
@@ -42,6 +42,38 @@ isSupported =
     Native.BatteryStatus.isSupported
 
 
+{-| Include battery status changes in your subscriptions if they are available
+on the user's device.
+
+    type Msg
+        = BatteryStatusChange BatteryStatus.BatteryStatus
+
+
+    main : Program Never
+    main =
+        { view = view, update = update, init = init, subscriptions = subscriptions }
+            |> BatteryStatus.withChanges BatteryStatusChange
+            |> Html.App.program
+-}
+withChanges :
+    (BatteryStatus -> msg)
+    -> { a | subscriptions : model -> Sub msg }
+    -> { a | subscriptions : model -> Sub msg }
+withChanges tagger program =
+    if not isSupported then
+        program
+    else
+        { program
+            | subscriptions =
+                (\model ->
+                    Sub.batch
+                        [ program.subscriptions model
+                        , changes tagger
+                        ]
+                )
+        }
+
+
 {-| All available information about the battery in the device.
   * `isCharging` &mdash; whether the device is plugged in.
   * `level` &mdash; how much of a charge the battery has, from 0 to 1.
@@ -54,8 +86,8 @@ isSupported =
 type alias BatteryStatus =
     { isCharging : Bool
     , level : Float
-    , chargingTime : Time
-    , dischargingTime : Time
+    , chargingTime : Maybe Time
+    , dischargingTime : Maybe Time
     }
 
 

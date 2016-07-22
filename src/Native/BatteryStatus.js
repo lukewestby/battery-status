@@ -1,5 +1,8 @@
 var _lukewestby$battery_status$Native_BatteryStatus = (function () {
   var scheduler = _elm_lang$core$Native_Scheduler
+  var Just = _elm_lang$core$Maybe$Just
+  var Nothing = _elm_lang$core$Maybe$Nothing
+
 
   function getBattery() {
     return window.navigator.getBattery()
@@ -13,8 +16,8 @@ var _lukewestby$battery_status$Native_BatteryStatus = (function () {
     return {
       isCharging: battery.charging,
       level: battery.level,
-      chargingTime: battery.chargingTime * 1000,
-      dischargingTime: battery.dischargingTime * 1000
+      chargingTime: isFinite(battery.chargingTime) ? Just(battery.chargingTime * 1000) : Nothing,
+      dischargingTime: isFinite(battery.dischargingTime) ? Just(battery.dischargingTime * 1000) : Nothing
     }
   }
 

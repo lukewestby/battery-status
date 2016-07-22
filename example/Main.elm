@@ -1,5 +1,6 @@
 module Main exposing (..)
 
+import Time exposing (Time)
 import Task exposing (Task)
 import Html exposing (Html, text, div)
 import Html.Attributes exposing (style)
@@ -126,6 +127,37 @@ mask percentage =
         ]
 
 
+formatTime : Time -> String
+formatTime time =
+    let
+        hours =
+            time |> Time.inHours |> floor
+
+        minutes =
+            time - ((toFloat hours) * Time.hour) |> Time.inMinutes |> floor
+
+        minutesString =
+            if minutes < 10 then
+                "0" ++ (toString minutes)
+            else
+                toString minutes
+    in
+        (toString hours) ++ ":" ++ minutesString
+
+
+timingMessage : BatteryStatus -> Html Msg
+timingMessage { isCharging, chargingTime, dischargingTime } =
+    case ( isCharging, chargingTime, dischargingTime ) of
+        ( True, Just time, _ ) ->
+            text <| (formatTime time) ++ " Until Charged"
+
+        ( False, _, Just time ) ->
+            text <| (formatTime time) ++ " Remaining"
+
+        ( _, _, _ ) ->
+            text "Calculating battery life..."
+
+
 view : Model -> Html Msg
 view { batteryStatus } =
     if not BatteryStatus.isSupported then
@@ -143,12 +175,13 @@ view { batteryStatus } =
                         , ( "align-items", "center" )
                         , ( "width", "100%" )
                         , ( "height", "100%" )
+                        , ( "flex-direction", "column" )
                         ]
                     ]
                     [ svg
                         [ viewBox "0 0 100 60"
-                        , width "400px"
-                        , height "240px"
+                        , width "200px"
+                        , height "120px"
                         ]
                         [ defs [] [ mask status.level ]
                         , path
@@ -159,19 +192,19 @@ view { batteryStatus } =
                         , emptySpace status.isCharging
                         , filledSpace status.isCharging
                         ]
+                    , div
+                        [ style
+                            [ ( "font-family", "sans-serif" )
+                            , ( "font-size", "2em" )
+                            , ( "padding", "24px" )
+                            ]
+                        ]
+                        [ timingMessage status ]
                     ]
-
-
-subscriptions : Model -> Sub Msg
-subscriptions model =
-    BatteryStatus.changes BatteryStatusChange
 
 
 main : Program Never
 main =
-    HtmlApp.program
-        { init = init
-        , update = update
-        , view = view
-        , subscriptions = subscriptions
-        }
+    { init = init, update = update, view = view, subscriptions = \_ -> Sub.none }
+        |> BatteryStatus.withChanges BatteryStatusChange
+        |> HtmlApp.program

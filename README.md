@@ -1,5 +1,3 @@
-> WORK IN PROGRESS
-
 # Battery Status
 
 ### [Try it!](https://lukewestby.github.io/battery-status/example)
